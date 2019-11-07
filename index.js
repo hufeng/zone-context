@@ -30,21 +30,23 @@ async function ZoneContext(fn) {
 
 function getContext(key) {
   const asyncId = async_hooks.executionAsyncId();
-  let val = contexts[asyncId];
-  while (typeof val !== 'object' && typeof val !== 'undefined') {
-    val = contexts[val];
-  }
-  return val && val[key];
+  const root = findRootVal(asyncId);
+  return root && root[key];
 }
 
 function setContext(param = {}) {
   const curId = async_hooks.executionAsyncId();
-  let parent = contexts[curId];
+  const root = findRootVal(curId);
+  if (root) {
+    merge(root, param);
+  }
+}
 
+function findRootVal(asyncId) {
+  let parent = contexts[asyncId];
   // root
   if (typeof parent === 'object') {
-    merge(parent, param);
-    return;
+    return parent;
   }
 
   // 寻找root
@@ -52,9 +54,7 @@ function setContext(param = {}) {
     parent = contexts[parent];
   }
 
-  if (parent) {
-    merge(parent, param);
-  }
+  return parent;
 }
 
 function destroy(rootId) {
